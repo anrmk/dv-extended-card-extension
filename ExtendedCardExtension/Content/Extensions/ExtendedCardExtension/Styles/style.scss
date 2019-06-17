@@ -1,0 +1,40 @@
+﻿div.show-report-data {
+    $table-caption-color: #6c757d;
+    $table-border-color: #dee2e6;
+    $table-head-background-color: #343a40;
+    $table-head-text-color: #fff;
+
+    > div {
+        margin-bottom: 0.5rem !important;
+    }
+
+    table {
+        width: 100%;
+
+        caption {
+            padding-top: .75rem;
+            padding-bottom: .75rem;
+            color: $table-caption-color;
+            text-align: left;
+            caption-side: initial;
+        }
+
+        tr:nth-child(2n) {
+            background-color: rgba(0,0,0,.05);
+        }
+
+        thead th {
+            vertical-align: middle;
+            background-color: $table-head-background-color;
+            color: $table-head-text-color;
+            border-bottom: 2px solid $table-border-color;
+        }
+
+        th, td {
+            padding: .3rem;
+            vertical-align: top;
+            border-top: 1px solid $table-border-color;
+            font-size: 0.85rem !important;
+        }
+    }
+}
