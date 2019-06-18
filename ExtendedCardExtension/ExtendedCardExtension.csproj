@@ -50,7 +50,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="DocsVision.ApprovalDesigner.ObjectModel">
-      <HintPath>..\..\..\Downloads\LibDV\DocsVision.ApprovalDesigner.ObjectModel.dll</HintPath>
+      <HintPath>..\bin\DocsVision.ApprovalDesigner.ObjectModel.dll</HintPath>
     </Reference>
     <Reference Include="DocsVision.BackOffice.ObjectModel">
       <HintPath>..\Assemblies\Docsvision\DocsVision.BackOffice.ObjectModel.dll</HintPath>
@@ -77,7 +77,7 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="DocsVision.Platform.SystemCards.ObjectModel">
-      <HintPath>..\..\..\Downloads\LibDV\DocsVision.Platform.SystemCards.ObjectModel.dll</HintPath>
+      <HintPath>..\bin\DocsVision.Platform.SystemCards.ObjectModel.dll</HintPath>
     </Reference>
     <Reference Include="DocsVision.Platform.WebClient, Version=5.0.0.0, Culture=neutral, PublicKeyToken=7148afe997f90519, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>

@@ -175,18 +175,21 @@ namespace ExtendedCardExtension.Controllers {
             if (processStateSection.Count > 0) {
                 foreach (BaseCardSectionRow row in processStateSection) {
                     var employeeId = row["Employee"]?.ToString();
-                    //DateTime date = DateTime.Parse(row["Date"]?.ToString());
-                    var employee = mSessionContext.ObjectContext.GetObject<StaffEmployee>(new Guid(employeeId));
-                    if (employee != null) {
-                        result.ChildList.Add(new CardStatusLogDataModel() {
-                            EmployeeId = employeeId?.ToString(),
-                            EmployeeName = "test", //employee?.DisplayName,
-                            WorkLabel = row["WorkLabel"]?.ToString(),
-                            Date = row["Date"]?.ToString(),
-                            EndDate = row["Date"]?.ToString(),
-                            Labourness = row["Labourness"] as string
-                        });
+                    string employeeDisplayName = "";
+                    if (!string.IsNullOrEmpty(employeeId)) {
+                        var employee = mSessionContext.ObjectContext.GetObject<StaffEmployee>(new Guid(employeeId));
+                        employeeDisplayName = employee?.DisplayName;
                     }
+
+                    result.ChildList.Add(new CardStatusLogDataModel() {
+                        Id = "",
+                        EmployeeId = employeeId,
+                        EmployeeName = employeeDisplayName,
+                        WorkLabel = row["WorkLabel"]?.ToString(),
+                        Date = row["Date"]?.ToString(),
+                        EndDate = row["EndDate"]?.ToString(),
+                        Labourness = row["Labourness"] as string
+                    });
                 }
             }
             #endregion
