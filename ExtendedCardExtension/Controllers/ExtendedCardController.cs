@@ -174,6 +174,9 @@ namespace ExtendedCardExtension.Controllers {
             var processStateSection = document.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31")); // содержание
             if (processStateSection.Count > 0) {
                 foreach (BaseCardSectionRow row in processStateSection) {
+                    decimal labourness = 0;
+                    decimal.TryParse(row["Labourness"] as string, out labourness);
+
                     var employeeId = row["Employee"]?.ToString();
                     string employeeDisplayName = "";
                     if (!string.IsNullOrEmpty(employeeId)) {
@@ -186,9 +189,9 @@ namespace ExtendedCardExtension.Controllers {
                         EmployeeId = employeeId,
                         EmployeeName = employeeDisplayName,
                         WorkLabel = row["WorkLabel"]?.ToString(),
-                        Date = row["Date"]?.ToString(),
-                        EndDate = row["EndDate"]?.ToString(),
-                        Labourness = row["Labourness"] as string
+                        Date = ((DateTime)row["Date"]).ToString("dd.MM.yyyy HH:mm:ss"),
+                        EndDate = ((DateTime)row["EndDate"]).ToString("dd.MM.yyyy HH:mm:ss"),
+                        Labourness = labourness.ToString("0.##")
                     });
                 }
             }
