@@ -152,12 +152,15 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Controllers\ExtendedCardController.cs" />
+    <Compile Include="Helpers\DocumentHelper.cs" />
     <Compile Include="Helpers\ServiceHelper.cs" />
     <Compile Include="Helpers\SessionContext.cs" />
     <Compile Include="LayoutWebClientExtension.cs" />
+    <Compile Include="Models\CardReconciliationDataModel.cs" />
     <Compile Include="Models\CardStatusLogDataModel.cs" />
     <Compile Include="Models\ExtendedCardDataModel.cs" />
     <Compile Include="Models\TaskDataModel.cs" />
+    <Compile Include="Models\WorkLabelEnum.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

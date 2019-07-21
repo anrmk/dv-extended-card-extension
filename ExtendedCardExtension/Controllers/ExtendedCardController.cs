@@ -14,7 +14,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using ExtendedCardExtension.Models;
 using ServiceHelper = ExtendedCardExtension.Helpers.ServiceHelper;
-using static DocsVision.BackOffice.CardLib.CardDefs.RefKinds;
+using ExtendedCardExtension.Helpers;
 
 namespace ExtendedCardExtension.Controllers {
     /// <summary>
@@ -37,7 +37,6 @@ namespace ExtendedCardExtension.Controllers {
         /// </summary>
         /// <param name="serviceProvider">Сервис-провайдер</param>
         public ExtendedCardController(IServiceProvider serviceProvider) {
-
             this.serviceProvider = serviceProvider;
             this.serviceHelper = new ServiceHelper(serviceProvider);
 
@@ -67,6 +66,26 @@ namespace ExtendedCardExtension.Controllers {
         }
 
         /// <summary>
+        /// Получить статус документа,
+        /// </summary>
+        /// <param name="cardId"></param>
+        /// <returns></returns>
+        [HttpGet]
+        public JsonResult<CommonResponse<string>> GetCardStatus(Guid cardId) {
+            Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            var response = new CommonResponse<string>();
+
+            if (document == null || document?.MainInfo == null) {
+                response.InitializeError(Resources.Error_OperationIsNotAllowed);
+                return Json(response);
+            }
+            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+            response.InitializeSuccess(dh.State.DefaultName);
+
+            return Json(response);
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <param name="cardId">Идентификатор карты</param>
@@ -85,18 +104,25 @@ namespace ExtendedCardExtension.Controllers {
                 response.InitializeError(Resources.Error_OperationIsNotAllowed);
                 return Json(response);
             }
+            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+
+            //if (dh.State.DefaultName == "Is approving") {
+            //    //На согласовании, 
+            //    response.InitializeError($"Данная функция недоступна для статуса документа: {dh.State.LocalizedName}");
+            //    return Json(response);
+            //}
 
             var documentMainInfo = document?.MainInfo;
 
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
             var result = new ExtendedCardDataModel<TaskDataModel>() {
-                CardRegistrarName = documentMainInfo?.Registrar?.DisplayName,
-                CreateDate = document.CreateDate.ToString("dd.MM.yyyy HH:mm:ss"),
-                Author = documentMainInfo?.Author?.DisplayName,
-                State = document.SystemInfo.State.LocalizedName,
-                ItemName = documentMainInfo?.Item?.Name,
-                SortName = documentMainInfo?.Name
-            };
+                CardRegistrarName = dh.RegistrarName,
+                CreateDate = dh.CreatedDate,
+                Author = dh.AuthorName,
+                State = dh.State.LocalizedName,
+                ItemName = dh.ItemName,
+                ShortName = dh.Name
+                };
             #endregion
 
             #region Получаем СОДЕРЖАНИЕ (ОПИСАНИЕ) через идентификатор
@@ -106,7 +132,7 @@ namespace ExtendedCardExtension.Controllers {
 
             #region Получаем ИСПОЛНИТЕЛЯ через идентификатор
             var performanceSection = document.GetSection(CardDocument.AcquaintanceStaff.ID); // получение секции по исполнителю (действующие лица)
-            var performancePersonRow = performanceSection.Cast<BaseCardSectionRow>().SingleOrDefault(i => i != null);
+            var performancePersonRow = performanceSection.Cast<BaseCardSectionRow>().FirstOrDefault(i => i != null);
             if (performancePersonRow != null) {
                 //result.CurrentPerformers = Найти пользователя
                 //var performancePerson = mSessionContext.ObjectContext.GetObject<StaffEmployee>(performancePersonRow["AcquaintancePersons"]);
@@ -143,12 +169,13 @@ namespace ExtendedCardExtension.Controllers {
             response.InitializeSuccess(result);
             return Json(response);
         }
-
+        
         /// <summary>
         /// Журнал перехода состояний
         /// </summary>
         /// <param name="cardId">Идентификатор карты</param>
         /// <returns></returns>
+        [HttpGet]
         public JsonResult<CommonResponse<ExtendedCardDataModel<CardStatusLogDataModel>>> GetCardStatusLogs(Guid cardId) {
             Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
             var response = new CommonResponse<ExtendedCardDataModel<CardStatusLogDataModel>>();
@@ -157,6 +184,8 @@ namespace ExtendedCardExtension.Controllers {
                 response.InitializeError(Resources.Error_OperationIsNotAllowed);
                 return Json(response);
             }
+            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+
             var documentMainInfo = document.MainInfo;
 
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
@@ -166,7 +195,7 @@ namespace ExtendedCardExtension.Controllers {
                 Author = documentMainInfo?.Author?.DisplayName,
                 State = document.SystemInfo.State.LocalizedName,
                 ItemName = documentMainInfo?.Item?.Name,
-                SortName = documentMainInfo?.Name
+                ShortName = documentMainInfo?.Name
             };
             #endregion
 
@@ -174,8 +203,12 @@ namespace ExtendedCardExtension.Controllers {
             var processStateSection = document.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31")); // содержание
             if (processStateSection.Count > 0) {
                 foreach (BaseCardSectionRow row in processStateSection) {
-                    decimal labourness = 0;
-                    decimal.TryParse(row["Labourness"] as string, out labourness);
+                    string labourness = row["Labourness"] as string;
+                    if(labourness != null) {
+                        labourness = labourness.Remove((labourness.IndexOf(".") + 1) + 2);
+                    } else {
+                        labourness = "";
+                    }
 
                     var employeeId = row["Employee"]?.ToString();
                     string employeeDisplayName = "";
@@ -188,10 +221,10 @@ namespace ExtendedCardExtension.Controllers {
                         Id = "",
                         EmployeeId = employeeId,
                         EmployeeName = employeeDisplayName,
-                        WorkLabel = row["WorkLabel"]?.ToString(),
-                        Date = ((DateTime)row["Date"]).ToString("dd.MM.yyyy HH:mm:ss"),
-                        EndDate = ((DateTime)row["EndDate"]).ToString("dd.MM.yyyy HH:mm:ss"),
-                        Labourness = labourness.ToString("0.##")
+                        WorkLabel = GetWorkLabelByCode(row["WorkLabel"]?.ToString()),
+                        Date = row["Date"] != null ? ((DateTime)row["Date"]).ToString("dd.MM.yyyy HH:mm") : "",
+                        EndDate = row["EndDate"] != null ? ((DateTime)row["EndDate"]).ToString("dd.MM.yyyy HH:mm") : "",
+                        Labourness = labourness
                     });
                 }
             }
@@ -201,6 +234,38 @@ namespace ExtendedCardExtension.Controllers {
             return Json(response);
         }
 
+        [HttpGet]
+        public JsonResult<CommonResponse<ExtendedCardDataModel<ReconciliationDataModel>>> GetCardReconciliationList(Guid cardId) {
+            Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            var response = new CommonResponse<ExtendedCardDataModel<ReconciliationDataModel>>();
+
+            if (document == null || document?.MainInfo == null) {
+                response.InitializeError(Resources.Error_OperationIsNotAllowed);
+                return Json(response);
+            }
+
+            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+
+            var documentMainInfo = document.MainInfo;
+
+            #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
+            var result = new ExtendedCardDataModel<ReconciliationDataModel>() {
+                ShortName = dh.Name, //Наименование/ предмет договора
+                NumberItemName = dh.DocumentName, // НомерДокумента
+                Description = dh.Description, //Наименование объекта
+                Author = dh.ResponseStaffName, //Заказчик
+                Partners = string.Join(",", dh.PartnersCompany),
+
+                //CardRegistrarName = documentMainInfo?.Registrar?.DisplayName,
+                //CreateDate = document.CreateDate.ToString("dd.MM.yyyy HH:mm:ss"),
+                ////Author = documentMainInfo?.Author?.DisplayName,
+                //State = document.SystemInfo.State.LocalizedName,
+                //ItemName = documentMainInfo?.Item?.Name,
+            };
+            #endregion
+
+            return null;
+        }
 
         protected override JsonResult<T> Json<T>(T content, JsonSerializerSettings serializerSettings, Encoding encoding) {
             var defaultSerializerSettings = new JsonSerializerSettings {
@@ -212,6 +277,29 @@ namespace ExtendedCardExtension.Controllers {
                 ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
             return base.Json<T>(content, defaultSerializerSettings, encoding);
+        }
+
+        private string GetWorkLabelByCode(string code) {
+            switch (code) {
+                case "0":
+                    return "Регистрация";
+                case "1":
+                    return "Согласование";
+                case "2":
+                    return "Диспетчеризация";
+                case "3":
+                    return "Уточнение от диспетчера";
+                case "4":
+                    return "Уточнение от исполнителя";
+                case "5":
+                    return "Ожидание";
+                case "6":
+                    return "Выполняется";
+                case "7":
+                    return "Тестирование";
+                default:
+                    return "Неопределено";
+            }
         }
     }
 }

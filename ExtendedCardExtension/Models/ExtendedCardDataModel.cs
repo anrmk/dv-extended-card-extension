@@ -45,17 +45,21 @@ namespace ExtendedCardExtension.Models {
         /// <summary>
         /// Краткое наименование
         /// </summary>
-        public string SortName { get; set; }
+        public string ShortName { get; set; }
 
         /// <summary>
         /// Описание
         /// </summary>
         public string Description { get; set; }
 
+        /// <summary>
+        /// Определение сторон (партнеры)
+        /// </summary>
+        public string Partners { get; internal set; }
+
+
         // public DateTime Date { get; set; } = DateTime.Now;
 
         public List<T> ChildList { get; set; } = new List<T>();
     }
-
-    
 }
