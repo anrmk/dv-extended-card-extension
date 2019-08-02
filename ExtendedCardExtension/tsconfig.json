@@ -15,6 +15,6 @@
   },
   "include": [
     "../Typings/**/*.d.ts",
-    "Content/Extensions/ExtendedCardExtension/Scripts/**/*.ts*", "Controllers/ExtendedCardController.cs"
+    "Content/Extensions/ExtendedCardExtension/Scripts/**/*.ts*", "Controllers/ExtendedCardController.cs", "Models/CardDataModel.cs"
   ]
 }

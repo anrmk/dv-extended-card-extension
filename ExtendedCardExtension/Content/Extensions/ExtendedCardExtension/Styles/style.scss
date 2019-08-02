@@ -36,5 +36,14 @@
             border-top: 1px solid $table-border-color;
             font-size: 0.85rem !important;
         }
+
+        a {
+            white-space: initial !important;
+        }
+
+        small {
+            font-size: 8.5pt;
+            font-weight: bold;
+        }
     }
 }

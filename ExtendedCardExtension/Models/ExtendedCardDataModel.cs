@@ -6,7 +6,7 @@ namespace ExtendedCardExtension.Models {
         /// Состояние документа
         /// </summary>
         public string State { get; set; }
-        
+
         /// <summary>
         /// Создал карточку
         /// </summary>
@@ -55,8 +55,52 @@ namespace ExtendedCardExtension.Models {
         /// <summary>
         /// Определение сторон (партнеры)
         /// </summary>
-        public string Partners { get; internal set; }
+        public string Partners { get; set; }
 
+        /// <summary>
+        /// Сумма контракта
+        /// </summary>
+        public string ContractAmount { get; set; }
+
+        /// <summary>
+        /// Бюджет
+        /// </summary>
+        public string ContractTotalAmount { get; set; }
+
+        /// <summary>
+        /// Сметная стоимость
+        /// </summary>
+        public string EstimatedCost { get; set; }
+
+        /// <summary>
+        /// Аванс
+        /// </summary>
+        public string Deposit { get; set; }
+
+        /// <summary>
+        /// Особые условия
+        /// </summary>
+        public string ContractNotes { get; set; }
+
+        /// <summary>
+        /// Срок выполнения работ
+        /// </summary>
+        public string Deadline { get; set; }
+
+        /// <summary>
+        /// Примечания по срокам
+        /// </summary>
+        public string DeadlineNotes { get; set; }
+
+        /// <summary>
+        /// Гарантия
+        /// </summary>
+        public string Guarantee { get; set; }
+
+        /// <summary>
+        /// Примичание
+        /// </summary>
+        public string Content { get; set; }
 
         // public DateTime Date { get; set; } = DateTime.Now;
 

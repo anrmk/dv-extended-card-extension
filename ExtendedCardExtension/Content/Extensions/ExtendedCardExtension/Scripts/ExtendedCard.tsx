@@ -15,6 +15,7 @@
     export interface ITaskDataModel {
         id: string;
         author: string;
+        kind: string;
         state: string;
         endDate: string;
         completedUser: string;
@@ -63,16 +64,17 @@
                             <caption>Задания по документы:</caption>
                             <thead>
                                 <tr>
-                                    <th>Ссылка на задание</th>
+                                    <th>Задание</th>
+                                    <th>Вид</th>
                                     <th>Автор</th>
                                     <th>Состояние</th>
-                                    <th>Дата завершения (плановая)</th>
+                                    <th>Дата завершения (фактическая)</th>
                                     <th>Назначенный исполнитель</th>
                                     <th>Текущий исполнитель</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.childList.map((value, index) => <tr key={index}><td><a href={`#/TaskView/${value.id}`} target='_blank' >{value.id}</a></td><td>{value.author}</td><td>{value.state}</td><td>{value.endDate}</td><td>{value.performers}</td><td>{value.currentPerformers}</td></tr>)}
+                                {data.childList.map((value, index) => <tr key={index}><td><a href={`#/TaskView/${value.id}`} target='_blank'>{value.name}</a><br /><small>{value.id}</small></td><td>{value.kind}</td><td>{value.author}</td><td>{value.state}</td><td>{value.endDate}</td><td>{value.performers}</td><td>{value.currentPerformers}</td></tr>)}
                             </tbody>
                         </table>
                     </div>

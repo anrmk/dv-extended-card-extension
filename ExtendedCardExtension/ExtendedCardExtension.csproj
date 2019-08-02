@@ -158,6 +158,7 @@
     <Compile Include="LayoutWebClientExtension.cs" />
     <Compile Include="Models\CardReconciliationDataModel.cs" />
     <Compile Include="Models\CardStatusLogDataModel.cs" />
+    <Compile Include="Models\CardDataModel.cs" />
     <Compile Include="Models\ExtendedCardDataModel.cs" />
     <Compile Include="Models\TaskDataModel.cs" />
     <Compile Include="Models\WorkLabelEnum.cs" />

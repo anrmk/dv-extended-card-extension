@@ -16,6 +16,11 @@ namespace ExtendedCardExtension.Models {
         public string Name { get; set; }
 
         /// <summary>
+        /// Вид задания
+        /// </summary>
+        public string Kind { get; set; }
+
+        /// <summary>
         /// Автор
         /// </summary>
         public string Author { get; set; }

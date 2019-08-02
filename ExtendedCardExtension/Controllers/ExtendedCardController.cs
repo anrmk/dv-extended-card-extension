@@ -112,35 +112,21 @@ namespace ExtendedCardExtension.Controllers {
             //    return Json(response);
             //}
 
-            var documentMainInfo = document?.MainInfo;
-
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
             var result = new ExtendedCardDataModel<TaskDataModel>() {
                 CardRegistrarName = dh.RegistrarName,
                 CreateDate = dh.CreatedDate,
                 Author = dh.AuthorName,
+                CurrentPerformers = dh.CurrentPerformers,
                 State = dh.State.LocalizedName,
                 ItemName = dh.ItemName,
-                ShortName = dh.Name
-                };
-            #endregion
-
-            #region Получаем СОДЕРЖАНИЕ (ОПИСАНИЕ) через идентификатор
-            var content = document.MainInfo[CardDocument.MainInfo.Content] as string; // содержание
-            result.Description = content;
-            #endregion
-
-            #region Получаем ИСПОЛНИТЕЛЯ через идентификатор
-            var performanceSection = document.GetSection(CardDocument.AcquaintanceStaff.ID); // получение секции по исполнителю (действующие лица)
-            var performancePersonRow = performanceSection.Cast<BaseCardSectionRow>().FirstOrDefault(i => i != null);
-            if (performancePersonRow != null) {
-                //result.CurrentPerformers = Найти пользователя
-                //var performancePerson = mSessionContext.ObjectContext.GetObject<StaffEmployee>(performancePersonRow["AcquaintancePersons"]);
-            }
+                ShortName = dh.Name,
+                Description = dh.Content // СОДЕРЖАНИЕ (ОПИСАНИЕ)
+            };
             #endregion
 
             #region Получаем список ЗАДАНИЙ
-            foreach (TaskListTask taskItem in document.MainInfo?.Tasks?.Tasks) {
+            foreach (TaskListTask taskItem in dh.GetMainInfo.Tasks?.Tasks) {
                 var task = taskItem?.Task;
                 if (task != null) {
                     var taskMainInfo = task?.MainInfo;
@@ -153,12 +139,13 @@ namespace ExtendedCardExtension.Controllers {
                     result.ChildList.Add(new TaskDataModel() {
                         Id = task?.GetObjectId().ToString(),
                         Name = taskMainInfo.Name,
+                        Kind = task.SystemInfo?.CardKind.Name,
                         Author = taskMainInfo.Author.DisplayName,
                         State = task?.SystemInfo.State.LocalizedName,
-                        EndDate = taskMainInfo.EndDate?.ToString("dd.MM.yyyy HH:mm:ss"),
+                        EndDate = taskMainInfo.EndDateActual?.ToString("dd.MM.yyyy HH:mm"),
                         Performers = taskMainInfo?.SelectedPerformers?.FirstOrDefault()?.Employee.DisplayName,
                         CurrentPerformers = task.CurrentPerformers?.FirstOrDefault()?.Employee.DisplayName,
-                        StartDate = taskMainInfo.StartDate?.ToString("dd.MM.yyyy HH:mm:ss"),
+                        StartDate = taskMainInfo.StartDate?.ToString("dd.MM.yyyy HH:mm"),
                         Laboriousness = taskMainInfo.Laboriousness,
                         PercentCompleted = taskMainInfo.PercentCompleted.ToString()
                     });
@@ -169,7 +156,7 @@ namespace ExtendedCardExtension.Controllers {
             response.InitializeSuccess(result);
             return Json(response);
         }
-        
+
         /// <summary>
         /// Журнал перехода состояний
         /// </summary>
@@ -186,25 +173,23 @@ namespace ExtendedCardExtension.Controllers {
             }
             DocumentHelper dh = new DocumentHelper(document, mSessionContext);
 
-            var documentMainInfo = document.MainInfo;
-
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
             var result = new ExtendedCardDataModel<CardStatusLogDataModel>() {
-                CardRegistrarName = documentMainInfo?.Registrar?.DisplayName,
-                CreateDate = document.CreateDate.ToString("dd.MM.yyyy HH:mm:ss"),
-                Author = documentMainInfo?.Author?.DisplayName,
-                State = document.SystemInfo.State.LocalizedName,
-                ItemName = documentMainInfo?.Item?.Name,
-                ShortName = documentMainInfo?.Name
+                CardRegistrarName = dh.RegistrarName,
+                CreateDate = dh.CreatedDate,
+                Author = dh.AuthorName,
+                State = dh.State.LocalizedName,
+                ItemName = dh.ItemName,
+                ShortName = dh.Name
             };
             #endregion
 
             #region Получаем ЖУРНАЛ ПЕРЕХОДА СОСТОЯНИЙ
-            var processStateSection = document.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31")); // содержание
+            var processStateSection = dh.GetDocument.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31")); // содержание
             if (processStateSection.Count > 0) {
                 foreach (BaseCardSectionRow row in processStateSection) {
                     string labourness = row["Labourness"] as string;
-                    if(labourness != null) {
+                    if (labourness != null) {
                         labourness = labourness.Remove((labourness.IndexOf(".") + 1) + 2);
                     } else {
                         labourness = "";
@@ -235,9 +220,9 @@ namespace ExtendedCardExtension.Controllers {
         }
 
         [HttpGet]
-        public JsonResult<CommonResponse<ExtendedCardDataModel<ReconciliationDataModel>>> GetCardReconciliationList(Guid cardId) {
+        public JsonResult<CommonResponse<ExtendedCardDataModel<CardDataModel>>> GetCardReconciliationList(Guid cardId) {
             Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
-            var response = new CommonResponse<ExtendedCardDataModel<ReconciliationDataModel>>();
+            var response = new CommonResponse<ExtendedCardDataModel<CardDataModel>>();
 
             if (document == null || document?.MainInfo == null) {
                 response.InitializeError(Resources.Error_OperationIsNotAllowed);
@@ -246,16 +231,24 @@ namespace ExtendedCardExtension.Controllers {
 
             DocumentHelper dh = new DocumentHelper(document, mSessionContext);
 
-            var documentMainInfo = document.MainInfo;
-
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
-            var result = new ExtendedCardDataModel<ReconciliationDataModel>() {
+            var result = new ExtendedCardDataModel<CardDataModel>() {
                 ShortName = dh.Name, //Наименование/ предмет договора
                 NumberItemName = dh.DocumentName, // НомерДокумента
                 Description = dh.Description, //Наименование объекта
                 Author = dh.ResponseStaffName, //Заказчик
-                Partners = string.Join(",", dh.PartnersCompany),
-
+                Partners = string.Join(";", dh.PartnersCompany),
+                ContractAmount = dh.ContractAmount, //Сумма контракта
+                ContractTotalAmount = dh.ContractTotalAmount,
+                EstimatedCost = dh.EstimatedCost,
+                Deposit = dh.Deposit,
+                ContractNotes = dh.ContractNotes,
+                Deadline = dh.ContractBegin == null || dh.ContractEnd == null ? "" : $"c {dh.ContractBegin.ToShortDateString()} по {dh.ContractEnd.ToShortDateString()}",
+                DeadlineNotes = dh.DeadlineNotes,
+                Guarantee = dh.Guarantee,
+                Content = dh.Content,
+                ChildList = dh.Cards
+                
                 //CardRegistrarName = documentMainInfo?.Registrar?.DisplayName,
                 //CreateDate = document.CreateDate.ToString("dd.MM.yyyy HH:mm:ss"),
                 ////Author = documentMainInfo?.Author?.DisplayName,
@@ -264,7 +257,8 @@ namespace ExtendedCardExtension.Controllers {
             };
             #endregion
 
-            return null;
+            response.InitializeSuccess(result);
+            return Json(response);
         }
 
         protected override JsonResult<T> Json<T>(T content, JsonSerializerSettings serializerSettings, Encoding encoding) {

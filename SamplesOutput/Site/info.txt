@@ -1,1 +1,9 @@
 установка в WebClient->Site
+Настройка в web.config
+configuration-> DocsVision -> Extensions -> добавить:
+<Extension TypeName="ExtendedCardExtension.LayoutWebClientExtension, ExtendedCardExtension" Target="Client" />
+
+Основные функции JS:
+getExtendedCardTasks - получение списка заданий
+getExtendedCardStatusLogs - получение журнала перехода состояния
+getCardReconciliationList - получение листа согласования
