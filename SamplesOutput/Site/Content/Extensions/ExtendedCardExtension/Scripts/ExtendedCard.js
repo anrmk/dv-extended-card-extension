@@ -7,6 +7,19 @@ var WebClient;
                 args[_i] = arguments[_i];
             }
         }
+        /*
+        * В ожидании исполнения
+        * */
+        ExtendedCard.prototype.extendedCardClarificationRender = function (data) {
+            var _this = this;
+            return (React.createElement("div", { className: "show-report-data" },
+                React.createElement("input", { type: "hidden", name: "Id", value: data.id }),
+                React.createElement("div", null,
+                    React.createElement("label", null, "\u0421\u043E\u0434\u0435\u0440\u0436\u0430\u043D\u0438\u0435:")),
+                React.createElement("div", null,
+                    React.createElement("textarea", { type: "text", rows: "10", name: "content", defaultValue: data.description })),
+                React.createElement("button", { className: "button-helper empty-text align-center", onClick: function (e) { _this.postClarification(data.id); return; } }, "\u041D\u0430 \u0443\u0442\u043E\u0447\u043D\u0435\u043D\u0438\u0435")));
+        };
         ExtendedCard.prototype.extendedCardTasksRender = function (data) {
             return (React.createElement("div", { className: "show-report-data" },
                 React.createElement("div", null,
@@ -34,8 +47,8 @@ var WebClient;
                                 React.createElement("th", null, "\u0412\u0438\u0434"),
                                 React.createElement("th", null, "\u0410\u0432\u0442\u043E\u0440"),
                                 React.createElement("th", null, "\u0421\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0435"),
-                                React.createElement("th", null, "\u0414\u0430\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F (\u0444\u0430\u043A\u0442\u0438\u0447\u0435\u0441\u043A\u0430\u044F)"),
-                                React.createElement("th", null, "\u041D\u0430\u0437\u043D\u0430\u0447\u0435\u043D\u043D\u044B\u0439 \u0438\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C"),
+                                React.createElement("th", null, "\u0414\u0430\u0442\u0430 \u043D\u0430\u0447\u0430\u043B\u0430"),
+                                React.createElement("th", null, "\u0414\u0430\u0442\u0430 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0438\u044F"),
                                 React.createElement("th", null, "\u0422\u0435\u043A\u0443\u0449\u0438\u0439 \u0438\u0441\u043F\u043E\u043B\u043D\u0438\u0442\u0435\u043B\u044C"))),
                         React.createElement("tbody", null, data.childList.map(function (value, index) { return React.createElement("tr", { key: index },
                             React.createElement("td", null,
@@ -45,8 +58,8 @@ var WebClient;
                             React.createElement("td", null, value.kind),
                             React.createElement("td", null, value.author),
                             React.createElement("td", null, value.state),
+                            React.createElement("td", null, value.startDate),
                             React.createElement("td", null, value.endDate),
-                            React.createElement("td", null, value.performers),
                             React.createElement("td", null, value.currentPerformers)); }))))));
         };
         /**
@@ -186,6 +199,15 @@ var WebClient;
             var url = urlStore.urlResolver.resolveApiUrl("GetCardStatus", "ExtendedCard");
             return requestManager.get(url + "?cardId=" + cardId);
         };
+        ExtendedCard.prototype.getClarification = function (cardId) {
+            var url = urlStore.urlResolver.resolveApiUrl("GetExtendedCardClarification", "ExtendedCard");
+            return requestManager.get(url + "?cardId=" + cardId);
+        };
+        ExtendedCard.prototype.postClarification = function (cardId) {
+            var url = urlStore.urlResolver.resolveApiUrl("PostExtendedCardClarification", "ExtendedCard");
+            var data = JSON.stringify({ 'cardId': cardId, 'content': $('.show-report-data textarea[name=content]').val() });
+            return requestManager.post("" + url, data);
+        };
         return ExtendedCard;
     }());
     WebClient.ExtendedCard = ExtendedCard;
@@ -216,15 +238,13 @@ function getExtendedCardTasks(sender) {
     srd.getExtendedCardTasks(layout.cardInfo.id).done(function (response) {
         if (response != null) {
             var element = srd.extendedCardTasksRender(response);
-            WebClient.MessageBox.ShowInfo(element, "" + response.shortName).done(function () {
+            WebClient.MessageBox.ShowInfo(element, "\u041F\u043E\u0441\u043C\u043E\u0442\u0440\u0435\u0442\u044C \u0437\u0430\u0434\u0430\u043D\u0438\u044F: " + response.shortName).done(function () {
                 //alert("Диалог закрыт");
             });
         }
-    }) /*.fail((response) => {
-        WebClient.MessageBox.ShowInfo(response.Message, "Ошибка").done(() => {
-            //alert("Диалог закрыт");
-        });
-    })*/;
+    }).fail(function (response) {
+        WebClient.MessageBox.ShowInfo(response.Message, "Ошибка");
+    });
 }
 function getExtendedCardStatusLogs(sender) {
     var layout = sender.layout;
@@ -232,7 +252,7 @@ function getExtendedCardStatusLogs(sender) {
     srd.getCardStatusLogs(layout.cardInfo.id).then(function (response) {
         if (response != null) {
             var element = srd.extendedCardStatusLogsRender(response);
-            WebClient.MessageBox.ShowInfo(element, "" + response.shortName).done(function () { });
+            WebClient.MessageBox.ShowInfo(element, "\u0416\u0443\u0440\u043D\u0430\u043B \u043F\u0435\u0440\u0435\u0445\u043E\u0434\u0430 \u0441\u043E\u0441\u0442\u043E\u044F\u043D\u0438\u0439: " + response.shortName).done(function () { });
         }
     });
 }
@@ -242,7 +262,23 @@ function getCardReconciliationList(sender) {
     srd.getReconciliationList(layout.cardInfo.id).then(function (response) {
         if (response != null) {
             var element = srd.extendedReconciliationListRender(response);
-            WebClient.MessageBox.ShowInfo(element, "" + response.shortName).done(function () { });
+            WebClient.MessageBox.ShowInfo(element, "\u041B\u0438\u0441\u0442 \u0441\u043E\u0433\u043B\u0430\u0441\u043E\u0432\u0430\u043D\u0438\u044F: " + response.shortName).done(function () { });
+        }
+    });
+}
+function getCardClarification(sender) {
+    var layout = sender.layout;
+    var srd = new WebClient.ExtendedCard();
+    srd.getClarification(layout.cardInfo.id).then(function (response) {
+        if (response != null) {
+            var element = srd.extendedCardClarificationRender(response);
+            WebClient.MessageBox.ShowInfo(element, "\u0412 \u043E\u0436\u0438\u0434\u0430\u043D\u0438\u0438 \u0438\u0441\u043F\u043E\u043B\u043D\u0435\u043D\u0438\u044F: " + response.shortName)
+                .done(function (response) {
+                WebClient.MessageBox.ShowInfo(response.Message, "Выполнено");
+            })
+                .fail(function (response) {
+                WebClient.MessageBox.ShowError(response.Message, "Ошибка");
+            });
         }
     });
 }

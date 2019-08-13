@@ -15,6 +15,7 @@ using Newtonsoft.Json.Serialization;
 using ExtendedCardExtension.Models;
 using ServiceHelper = ExtendedCardExtension.Helpers.ServiceHelper;
 using ExtendedCardExtension.Helpers;
+using DocsVision.BackOffice.ObjectModel.Services.Entities.KindSetting;
 
 namespace ExtendedCardExtension.Controllers {
     /// <summary>
@@ -27,7 +28,7 @@ namespace ExtendedCardExtension.Controllers {
 
         //UserSession mAdminSession;
         // UserSession mSession;
-        SessionContext mSessionContext;
+        private readonly SessionContext context;
         //BaseCard mCard;
         //SessionManager mSessionMgr;
 
@@ -47,8 +48,8 @@ namespace ExtendedCardExtension.Controllers {
 
             //this.mAdminSession = this.mSession;
 
-            this.mSessionContext = new SessionContext();
-            this.mSessionContext.Initialize(userSession);
+            this.context = new SessionContext();
+            this.context.Initialize(userSession);
         }
 
         /// <summary>
@@ -72,14 +73,14 @@ namespace ExtendedCardExtension.Controllers {
         /// <returns></returns>
         [HttpGet]
         public JsonResult<CommonResponse<string>> GetCardStatus(Guid cardId) {
-            Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            Document document = context.ObjectContext.GetObject<Document>(cardId); // получил документ 
             var response = new CommonResponse<string>();
 
             if (document == null || document?.MainInfo == null) {
                 response.InitializeError(Resources.Error_OperationIsNotAllowed);
                 return Json(response);
             }
-            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+            DocumentHelper dh = new DocumentHelper(document, context);
             response.InitializeSuccess(dh.State.DefaultName);
 
             return Json(response);
@@ -97,14 +98,14 @@ namespace ExtendedCardExtension.Controllers {
             //Document document1 = context1.ObjectContext.GetObject<Document>(cardId); // получил документ 
             //var documentMainInfo1 = document1.MainInfo;
 
-            Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            Document document = context.ObjectContext.GetObject<Document>(cardId); // получил документ 
             var response = new CommonResponse<ExtendedCardDataModel<TaskDataModel>>();
 
             if (document == null || document?.MainInfo == null) {
                 response.InitializeError(Resources.Error_OperationIsNotAllowed);
                 return Json(response);
             }
-            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+            DocumentHelper dh = new DocumentHelper(document, context);
 
             //if (dh.State.DefaultName == "Is approving") {
             //    //На согласовании, 
@@ -117,7 +118,7 @@ namespace ExtendedCardExtension.Controllers {
                 CardRegistrarName = dh.RegistrarName,
                 CreateDate = dh.CreatedDate,
                 Author = dh.AuthorName,
-                CurrentPerformers = dh.CurrentPerformers,
+                CurrentPerformers = dh.CurrentAcquaintanceStaff,
                 State = dh.State.LocalizedName,
                 ItemName = dh.ItemName,
                 ShortName = dh.Name,
@@ -164,14 +165,14 @@ namespace ExtendedCardExtension.Controllers {
         /// <returns></returns>
         [HttpGet]
         public JsonResult<CommonResponse<ExtendedCardDataModel<CardStatusLogDataModel>>> GetCardStatusLogs(Guid cardId) {
-            Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            Document document = context.ObjectContext.GetObject<Document>(cardId); // получил документ 
             var response = new CommonResponse<ExtendedCardDataModel<CardStatusLogDataModel>>();
 
             if (document == null || document?.MainInfo == null) {
                 response.InitializeError(Resources.Error_OperationIsNotAllowed);
                 return Json(response);
             }
-            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+            DocumentHelper dh = new DocumentHelper(document, context);
 
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
             var result = new ExtendedCardDataModel<CardStatusLogDataModel>() {
@@ -185,7 +186,7 @@ namespace ExtendedCardExtension.Controllers {
             #endregion
 
             #region Получаем ЖУРНАЛ ПЕРЕХОДА СОСТОЯНИЙ
-            var processStateSection = dh.GetDocument.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31")); // содержание
+            var processStateSection = dh.GetDocument.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31"));
             if (processStateSection.Count > 0) {
                 foreach (BaseCardSectionRow row in processStateSection) {
                     string labourness = row["Labourness"] as string;
@@ -198,7 +199,7 @@ namespace ExtendedCardExtension.Controllers {
                     var employeeId = row["Employee"]?.ToString();
                     string employeeDisplayName = "";
                     if (!string.IsNullOrEmpty(employeeId)) {
-                        var employee = mSessionContext.ObjectContext.GetObject<StaffEmployee>(new Guid(employeeId));
+                        var employee = context.ObjectContext.GetObject<StaffEmployee>(new Guid(employeeId));
                         employeeDisplayName = employee?.DisplayName;
                     }
 
@@ -219,9 +220,14 @@ namespace ExtendedCardExtension.Controllers {
             return Json(response);
         }
 
+        /// <summary>
+        /// Лист согласования
+        /// </summary>
+        /// <param name="cardId"></param>
+        /// <returns></returns>
         [HttpGet]
         public JsonResult<CommonResponse<ExtendedCardDataModel<CardDataModel>>> GetCardReconciliationList(Guid cardId) {
-            Document document = mSessionContext.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            Document document = context.ObjectContext.GetObject<Document>(cardId); // получил документ 
             var response = new CommonResponse<ExtendedCardDataModel<CardDataModel>>();
 
             if (document == null || document?.MainInfo == null) {
@@ -229,7 +235,7 @@ namespace ExtendedCardExtension.Controllers {
                 return Json(response);
             }
 
-            DocumentHelper dh = new DocumentHelper(document, mSessionContext);
+            DocumentHelper dh = new DocumentHelper(document, context);
 
             #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
             var result = new ExtendedCardDataModel<CardDataModel>() {
@@ -237,7 +243,7 @@ namespace ExtendedCardExtension.Controllers {
                 NumberItemName = dh.DocumentName, // НомерДокумента
                 Description = dh.Description, //Наименование объекта
                 Author = dh.ResponseStaffName, //Заказчик
-                Partners = string.Join(";", dh.PartnersCompany),
+                Partners = string.Join(";", dh.PartnersCompany.Select(x => x.Name).ToArray()),
                 ContractAmount = dh.ContractAmount, //Сумма контракта
                 ContractTotalAmount = dh.ContractTotalAmount,
                 EstimatedCost = dh.EstimatedCost,
@@ -246,18 +252,140 @@ namespace ExtendedCardExtension.Controllers {
                 Deadline = dh.ContractBegin == null || dh.ContractEnd == null ? "" : $"c {dh.ContractBegin.ToShortDateString()} по {dh.ContractEnd.ToShortDateString()}",
                 DeadlineNotes = dh.DeadlineNotes,
                 Guarantee = dh.Guarantee,
-                Content = dh.Content,
-                ChildList = dh.Cards
-                
+                Content = dh.Content
+
                 //CardRegistrarName = documentMainInfo?.Registrar?.DisplayName,
                 //CreateDate = document.CreateDate.ToString("dd.MM.yyyy HH:mm:ss"),
                 ////Author = documentMainInfo?.Author?.DisplayName,
                 //State = document.SystemInfo.State.LocalizedName,
                 //ItemName = documentMainInfo?.Item?.Name,
             };
+
+            List<CardDataModel> cardModelList = new List<CardDataModel>();
+            var cards = dh.Cards;
+            if (cards.Count > 0)
+                foreach (CardData card in cards) {
+
+                }
+
             #endregion
 
             response.InitializeSuccess(result);
+            return Json(response);
+        }
+
+        [HttpGet]
+        public JsonResult<CommonResponse<ExtendedCardDataModel<string>>> GetExtendedCardClarification(Guid cardId) {
+            Document document = context.ObjectContext.GetObject<Document>(cardId); // получил документ 
+            var response = new CommonResponse<ExtendedCardDataModel<string>>();
+
+            if (document == null || document?.MainInfo == null) {
+                response.InitializeError(Resources.Error_OperationIsNotAllowed);
+                return Json(response);
+            }
+
+            //var sessionContext = this.serviceHelper.CurrentObjectContextProvider.GetOrCreateCurrentSessionContext();
+            //var kindId = this.serviceHelper.CardKindService.GetCardKindId(sessionContext, cardId);
+
+            DocumentHelper dh = new DocumentHelper(document, context);
+
+            if (dh.AcquaintanceStaff.Count == 0) {
+                response.InitializeError("Не возможно отправить заявку в работу. Не указаны исполнители!");
+                return Json(response);
+            }
+
+            #region Получаем ОБЩУЮ ИНФОРМАЦИЮ по документу
+            var result = new ExtendedCardDataModel<string>() {
+                Id = dh.Id,
+                CardRegistrarName = dh.RegistrarName,
+                CreateDate = dh.CreatedDate,
+                Author = dh.AuthorName,
+                State = dh.State.LocalizedName,
+                ItemName = dh.ItemName,
+                ShortName = dh.Name,
+                Description = dh.Content
+            };
+            #endregion
+
+            response.InitializeSuccess(result);
+            return Json(response);
+        }
+
+        [HttpPost]
+        public JsonResult<CommonResponse<string>> PostExtendedCardClarification([FromBody]CardClarificationViewModel data) {
+            var response = new CommonResponse<string>();
+
+            if (!ModelState.IsValid) {
+                response.InitializeError("");
+                return Json(response);
+            }
+            var cardId = data.cardId;
+            var content = data.content;
+
+            Document document = context.ObjectContext.GetObject<Document>(cardId); // получил документ 
+
+            if (document == null || document?.MainInfo == null) {
+                response.InitializeError(Resources.Error_OperationIsNotAllowed);
+                return Json(response);
+            }
+
+            IStaffService StaffService = context.ObjectContext.GetService<IStaffService>();
+
+            //serviceHelper.StaffService;
+            DocumentHelper dh = new DocumentHelper(document, context);
+            //отправить задание исполнителю
+            List<StaffEmployee> performers = dh.AcquaintanceStaff;
+
+            //var sessionContext = this.serviceHelper.CurrentObjectContextProvider.GetOrCreateCurrentSessionContext();
+            DateTime endDate = dh.GetServerDateTime.AddHours(4);
+            if (dh.Labourness > 0) {
+                ICalendarService CalendarService = context.ObjectContext.GetService<ICalendarService>();
+                endDate = CalendarService.GetEndDate(new Guid("98E34C46-989A-E211-A503-001676E1723A"), endDate, dh.Labourness);
+            }
+
+            //расчет времени исполнения
+            try {
+                var task = CreateTask(document, new Guid("4BF4A92E-9EFD-432C-B8BA-50B40E0118DB"), performers, endDate, "Задание на исполнение по заявке " + dh.Name, content);
+                if (!SentTaskToPerformer(task)) {
+                    response.InitializeError("Задание для не было отправлено");
+                    return Json(response);
+                }
+
+                //записать в журнал
+                var processStateSection = dh.GetDocument.GetSection(new Guid("0DBB2B16-C311-49B0-9612-647F7C7A7C31")); // содержание
+                if (processStateSection.Count > 0) {
+                    foreach (BaseCardSectionRow row in processStateSection) {
+                        var workLabel = row["WorkLabel"].ToString();
+
+                        //Если статус "На диспетчеризации" и дата окончания не NULL
+                        if (workLabel.Equals("2") && row["EndDate"] != null) {
+                            row["Employee"] = context.ObjectContext.GetObjectRef<StaffEmployee>(StaffService.GetCurrentEmployee()).Id;
+                            row["EndDate"] = dh.GetServerDateTime;
+
+                            DateTime startDate = (DateTime)row["Date"];
+                            //if (DateTime.TryParse(row["Date"] as string, out startDate)) {
+                            TimeSpan span = dh.GetServerDateTime - startDate;
+                            row["Labourness"] = Math.Round(Convert.ToDecimal(span.TotalHours), 2, MidpointRounding.AwayFromZero);
+                            //}
+
+                            BaseCardSectionRow newRow = new BaseCardSectionRow();
+                            newRow["Date"] = dh.GetServerDateTime;
+                            newRow["WorkLabel"] = 6; //выполняется
+                            processStateSection.Add(newRow);
+                            context.ObjectContext.SaveObject(document);
+                            break;
+                        }
+                    }
+                }
+
+                //изменить состояние карточки
+                dh.ChangeStatus("Hold");
+            } catch (Exception ex) {
+                response.InitializeError(ex.Message);
+                return Json(response);
+            }
+
+            response.InitializeSuccess("Задание отправлено на исполнение");
             return Json(response);
         }
 
@@ -294,6 +422,84 @@ namespace ExtendedCardExtension.Controllers {
                 default:
                     return "Неопределено";
             }
+        }
+
+        /// <summary>
+		/// Отправить задание исполнителю
+		/// </summary>
+		/// <param name="task"></param>
+		/// <returns></returns>
+        public bool SentTaskToPerformer(Task task) {
+            //MessageBox.Show("Вошли в функцию taskSent");
+            string oErrMessageForStart;
+
+            ITaskService TaskService = context.ObjectContext.GetService<ITaskService>();
+            IStateService StateService = context.ObjectContext.GetService<IStateService>();
+
+            bool canStart = TaskService.ValidateForBegin(task, out oErrMessageForStart);
+            if (canStart) {
+                TaskService.StartTask(task);
+
+                StatesState oStartedState = StateService.GetStates(task.SystemInfo.CardKind).FirstOrDefault(br => br.DefaultName == "Started");
+                task.SystemInfo.State = oStartedState;
+                //UIService.ShowMessage("Задание было отправлено");
+            } else {
+                throw new Exception($"Ошибка отправки задания: {oErrMessageForStart}");
+            }
+
+            context.ObjectContext.SaveObject<Task>(task);
+            return canStart;
+        }
+
+        /// <summary>
+        /// Создать задание
+        /// </summary>
+        /// <param name="document"></param>
+        /// <param name="kindId"></param>
+        /// <param name="performers"></param>
+        /// <param name="end"></param>
+        /// <param name="taskName"></param>
+        /// <param name="taskContent"></param>
+        /// <returns></returns>
+        public Task CreateTask(Document document, Guid kindId, List<StaffEmployee> performers, DateTime end, string taskName, string taskContent) {
+            ITaskService TaskService = context.ObjectContext.GetService<ITaskService>();
+            ITaskListService TaskListService = context.ObjectContext.GetService<ITaskListService>();
+            IStaffService StaffService = context.ObjectContext.GetService<IStaffService>();
+
+            KindsCardKind kind = context.ObjectContext.GetObject<KindsCardKind>(kindId);
+            Task task = TaskService.CreateTask(kind);
+
+            try {
+                TaskService.InitializeDefaults(task);
+
+                task.MainInfo.Name = taskName;
+                task.Description = taskName;
+                task.MainInfo.Author = StaffService.GetCurrentEmployee();
+                task.MainInfo.StartDate = DateTime.Now;
+                task.MainInfo.EndDate = end;
+                task.MainInfo.Content = taskContent;
+                //myTask.Preset.Completion.ReportRequired = false;
+
+                foreach (StaffEmployee performer in performers)
+                    TaskService.AddSelectedPerformer(task.MainInfo, performer);
+
+                TaskSetting taskSettings = TaskService.GetKindSettings(kind);
+                //добавляем ссылку на родительскую карточку
+                TaskService.AddLinkOnParentCard(task, taskSettings, document);
+                //добавляем ссылку на задание в карточку
+                TaskListService.AddTask(document.MainInfo.Tasks, task, document);
+                //создаем и сохраняем новый список заданий
+                TaskList newTaskList = TaskListService.CreateTaskList();
+                context.ObjectContext.SaveObject<TaskList>(newTaskList);
+                //записываем в задание
+                task.MainInfo.ChildTaskList = newTaskList;
+
+                context.ObjectContext.SaveObject(task);
+                context.ObjectContext.SaveObject(document);
+            } catch (Exception ex) {
+                throw new Exception("Во время создания задания произошла ошибка", ex);
+            }
+            return task;
         }
     }
 }

@@ -84,6 +84,9 @@
       <HintPath>..\Assemblies\Docsvision\DocsVision.Platform.WebClient.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="DocsVision.Platform.WinForms">
+      <HintPath>..\..\..\Downloads\DocsVision.Platform.WinForms.dll</HintPath>
+    </Reference>
     <Reference Include="Docsvision.WebClient.Extensibility">
       <HintPath>..\Assemblies\Docsvision\Docsvision.WebClient.Extensibility.dll</HintPath>
       <Private>False</Private>
@@ -129,6 +132,7 @@
       <HintPath>..\Assemblies\Microsoft\System.Web.Optimization.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Web.Services" />
@@ -156,6 +160,7 @@
     <Compile Include="Helpers\ServiceHelper.cs" />
     <Compile Include="Helpers\SessionContext.cs" />
     <Compile Include="LayoutWebClientExtension.cs" />
+    <Compile Include="Models\CardClarificationViewModel.cs" />
     <Compile Include="Models\CardReconciliationDataModel.cs" />
     <Compile Include="Models\CardStatusLogDataModel.cs" />
     <Compile Include="Models\CardDataModel.cs" />

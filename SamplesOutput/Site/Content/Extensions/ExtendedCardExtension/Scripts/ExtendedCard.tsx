@@ -1,5 +1,6 @@
 ﻿namespace WebClient {
     export interface IExtendedCardDataModel<T> {
+        id: string;
         cardRegistrarName: string;
         author: string;
         shortName: string;
@@ -48,9 +49,24 @@
         workLabel: string;
         labourness: string;
     }
+}
 
+namespace WebClient {
     export class ExtendedCard {
         constructor(...args) { }
+        /*
+        * В ожидании исполнения
+        * */
+        extendedCardClarificationRender(data: IExtendedCardDataModel<string>) {
+            return (
+                <div className="show-report-data">
+                    <input type="hidden" name="Id" value={data.id} />
+                    <div><label>Содержание:</label></div>
+                    <div><textarea type="text" rows="10" name="content" defaultValue={data.description}></textarea></div>
+                    <button className="button-helper empty-text align-center" onClick={(e) => { this.postClarification(data.id); return; }}>На уточнение</button>
+                </div>
+            );
+        }
 
         extendedCardTasksRender(data: IExtendedCardDataModel<ITaskDataModel>) {
             return (
@@ -68,13 +84,13 @@
                                     <th>Вид</th>
                                     <th>Автор</th>
                                     <th>Состояние</th>
-                                    <th>Дата завершения (фактическая)</th>
-                                    <th>Назначенный исполнитель</th>
+                                    <th>Дата начала</th>
+                                    <th>Дата завершения</th>
                                     <th>Текущий исполнитель</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {data.childList.map((value, index) => <tr key={index}><td><a href={`#/TaskView/${value.id}`} target='_blank'>{value.name}</a><br /><small>{value.id}</small></td><td>{value.kind}</td><td>{value.author}</td><td>{value.state}</td><td>{value.endDate}</td><td>{value.performers}</td><td>{value.currentPerformers}</td></tr>)}
+                                {data.childList.map((value, index) => <tr key={index}><td><a href={`#/TaskView/${value.id}`} target='_blank'>{value.name}</a><br /><small>{value.id}</small></td><td>{value.kind}</td><td>{value.author}</td><td>{value.state}</td><td>{value.startDate}</td><td>{value.endDate}</td><td>{value.currentPerformers}</td></tr>)}
                             </tbody>
                         </table>
                     </div>
@@ -185,6 +201,17 @@
             let url = urlStore.urlResolver.resolveApiUrl("GetCardStatus", "ExtendedCard");
             return requestManager.get(`${url}?cardId=${cardId}`);
         }
+
+        getClarification(cardId: string): JQueryDeferred<IExtendedCardDataModel<string>> {
+            let url = urlStore.urlResolver.resolveApiUrl("GetExtendedCardClarification", "ExtendedCard");
+            return requestManager.get<IExtendedCardDataModel<string>>(`${url}?cardId=${cardId}`);
+        }
+
+        postClarification(cardId: string): JQueryDeferred<string> {
+            let url = urlStore.urlResolver.resolveApiUrl("PostExtendedCardClarification", "ExtendedCard");
+            let data = JSON.stringify({ 'cardId': cardId, 'content': $('.show-report-data textarea[name=content]').val() });
+            return requestManager.post<string>(`${url}`, data);
+        }
     }
 
     //$(() => {
@@ -217,15 +244,13 @@ function getExtendedCardTasks(sender) {
     srd.getExtendedCardTasks(layout.cardInfo.id).done((response) => {
         if (response != null) {
             let element = srd.extendedCardTasksRender(response);
-            WebClient.MessageBox.ShowInfo(element, `${response.shortName}`).done(() => {
+            WebClient.MessageBox.ShowInfo(element, `Посмотреть задания: ${response.shortName}`).done(() => {
                 //alert("Диалог закрыт");
             });
         }
-    })/*.fail((response) => {
-        WebClient.MessageBox.ShowInfo(response.Message, "Ошибка").done(() => {
-            //alert("Диалог закрыт");
-        });
-    })*/;
+    }).fail((response) => {
+        WebClient.MessageBox.ShowInfo(response.Message, "Ошибка");
+    });
 }
 
 function getExtendedCardStatusLogs(sender) {
@@ -234,7 +259,7 @@ function getExtendedCardStatusLogs(sender) {
     srd.getCardStatusLogs(layout.cardInfo.id).then((response) => {
         if (response != null) {
             let element = srd.extendedCardStatusLogsRender(response);
-            WebClient.MessageBox.ShowInfo(element, `${response.shortName}`).done(() => { });
+            WebClient.MessageBox.ShowInfo(element, `Журнал перехода состояний: ${response.shortName}`).done(() => { });
         }
     });
 }
@@ -245,7 +270,24 @@ function getCardReconciliationList(sender) {
     srd.getReconciliationList(layout.cardInfo.id).then((response) => {
         if (response != null) {
             let element = srd.extendedReconciliationListRender(response);
-            WebClient.MessageBox.ShowInfo(element, `${response.shortName}`).done(() => { });
+            WebClient.MessageBox.ShowInfo(element, `Лист согласования: ${response.shortName}`).done(() => { });
+        }
+    });
+}
+
+function getCardClarification(sender) {
+    var layout = sender.layout;
+    var srd = new WebClient.ExtendedCard();
+    srd.getClarification(layout.cardInfo.id).then((response) => {
+        if (response != null) {
+            let element = srd.extendedCardClarificationRender(response);
+            WebClient.MessageBox.ShowInfo(element, `В ожидании исполнения: ${response.shortName}`)
+                .done((response) => {
+                    WebClient.MessageBox.ShowInfo(response.Message, "Выполнено");
+                })
+                .fail((response) => {
+                    WebClient.MessageBox.ShowError(response.Message, "Ошибка");
+                });
         }
     });
 }

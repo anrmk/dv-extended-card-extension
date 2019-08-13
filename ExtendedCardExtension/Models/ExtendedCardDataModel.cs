@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace ExtendedCardExtension.Models {
     public class ExtendedCardDataModel<T> {
+        public Guid Id { get; set; }
         /// <summary>
         /// Состояние документа
         /// </summary>

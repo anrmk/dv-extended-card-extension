@@ -1,13 +1,14 @@
 ﻿using DocsVision.BackOffice.CardLib.CardDefs;
 using DocsVision.BackOffice.ObjectModel;
+using DocsVision.BackOffice.ObjectModel.Services;
 using DocsVision.Platform.ObjectManager;
 using DocsVision.Platform.ObjectManager.Metadata;
 using DocsVision.Platform.ObjectManager.SearchModel;
-using ExtendedCardExtension.Models;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace ExtendedCardExtension.Helpers {
     public class DocumentHelper {
@@ -21,6 +22,11 @@ namespace ExtendedCardExtension.Helpers {
             if (doc != null)
                 document = doc;
         }
+
+        /// <summary>
+        /// Получить серверное время
+        /// </summary>
+        public DateTime GetServerDateTime => (DateTime)context.Session.Properties["ServerTime"].Value;
 
         public Document GetDocument => document;
 
@@ -59,6 +65,11 @@ namespace ExtendedCardExtension.Helpers {
                 }
             }
         }
+
+        /// <summary>
+        /// Индентификатор карточки
+        /// </summary>
+        public Guid Id => GetDocument.GetObjectId();
 
         /// <summary>
         /// Дата создания документа
@@ -126,22 +137,48 @@ namespace ExtendedCardExtension.Helpers {
         public string AuthorName => GetMainInfo.Author?.DisplayName;
 
         /// <summary>
-        /// Получение текущего исполнителя
+        /// Получение списка исполнителей
         /// </summary>
-        public string CurrentPerformers {
+        public List<StaffEmployee> AcquaintanceStaff {
             get {
-                var performers = "";
-                var section = GetDocument.GetSection(CardDocument.AcquaintanceStaff.ID); // получение секции по исполнителю (действующие лица)
+                var result = new List<StaffEmployee>();
+                var section = GetDocument.GetSection(CardDocument.AcquaintanceStaff.ID);
                 if (section != null) {
-                    var sectionRow = section.Cast<BaseCardSectionRow>()?.FirstOrDefault(i => i != null);
-                    Guid guid = Guid.Empty;
-                    if (Guid.TryParse(sectionRow["AcquaintancePersons"] as string, out guid)) {
-                        StaffEmployee item = this.context.ObjectContext.GetObject<StaffEmployee>(guid);
-                        if (item != null)
-                            performers += $"{item.ShortName}; ";
+                    foreach (BaseCardSectionRow sectionRow in section) {
+                        Guid guid = Guid.Empty;
+                        if (Guid.TryParse(sectionRow["AcquaintancePersons"] as string, out guid)) {
+                            StaffEmployee item = this.context.ObjectContext.GetObject<StaffEmployee>(guid);
+                            if (item != null) {
+                                result.Add(item);
+                            }
+                        }
                     }
                 }
-                return performers;
+                return result;
+            }
+        }
+        /// <summary>
+        /// Получение текущего исполнителя
+        /// </summary>
+        public string CurrentAcquaintanceStaff {
+            get {
+                List<StaffEmployee> staffEmployee = AcquaintanceStaff;
+                if (staffEmployee.Count > 0) {
+                    return staffEmployee[0].ShortName;
+                }
+                return string.Empty;
+                //var performers = "";
+                //var section = GetDocument.GetSection(CardDocument.AcquaintanceStaff.ID); // получение секции по исполнителю (действующие лица)
+                //if (section != null) {
+                //    var sectionRow = section.Cast<BaseCardSectionRow>()?.FirstOrDefault(i => i != null);
+                //    Guid guid = Guid.Empty;
+                //    if (Guid.TryParse(sectionRow["AcquaintancePersons"] as string, out guid)) {
+                //        StaffEmployee item = this.context.ObjectContext.GetObject<StaffEmployee>(guid);
+                //        if (item != null)
+                //            performers += $"{item.ShortName}; ";
+                //    }
+                //}
+                //return performers;
             }
         }
 
@@ -162,7 +199,7 @@ namespace ExtendedCardExtension.Helpers {
         /// <summary>
         /// Определение сторон
         /// </summary>
-        public string[] PartnersCompany {
+        public List<PartnersCompany> PartnersCompany {
             get {
                 List<PartnersCompany> partners = new List<PartnersCompany>();
                 foreach (BaseCardSectionRow row in GetDocument.GetSection(CardDocument.ReceiversPartners.ID)) {
@@ -173,7 +210,7 @@ namespace ExtendedCardExtension.Helpers {
                             partners.Add(partner);
                     }
                 }
-                return partners.Select(x => x.Name).ToArray();
+                return partners;
             }
         }
 
@@ -214,6 +251,17 @@ namespace ExtendedCardExtension.Helpers {
         /// Сметная стоимость
         /// </summary>
         public string EstimatedCost => ContractSection["ContractSum"] as string;
+
+        /// <summary>
+        /// Трудозатраты
+        /// </summary>
+        public double Labourness {
+            get {
+                double labourness = 0.0;
+                double.TryParse(ContractSection["Labourness"] as string, out labourness);
+                return labourness;
+            }
+        }
 
         /// <summary>
         /// Аванс
@@ -269,7 +317,38 @@ namespace ExtendedCardExtension.Helpers {
             }
         }
 
-        public List<CardDataModel> Cards {
+        //public bool SaveCard {
+        //    get {
+        //        bool result = false;
+        //        MethodInfo saveCardMethodInfo = typeof(BaseCardControl).GetMethod("SaveCard", BindingFlags.NonPublic | BindingFlags.Instance);
+        //        if (saveCardMethodInfo != null)
+        //            result = (bool)saveCardMethodInfo.Invoke(document, new object[] { false });
+
+        //        return result;
+        //    }
+        //}
+
+        public void ChangeStatus(string state) {
+            IStateService StateService = context.ObjectContext.GetService<IStateService>();
+            IList<StatesStateMachineBranch> statesStateMachineBranch = StateService.FindLineBranchesByStartState(SystemInfo.State).ToList();
+
+            StatesStateMachineBranch branch = statesStateMachineBranch
+                .Where(t => t.StartState == SystemInfo.State 
+                    && t.BranchType == StatesStateMachineBranchBranchType.Line
+                    && t.EndState.DefaultName.Equals(state)).FirstOrDefault();
+
+            if (branch != null) {
+                //смена статуса
+                StateService.ChangeState(GetDocument, branch);
+            } else {
+                throw new Exception("Переход в состояние невозможен, так как данное состояние отсутствует");
+            }
+        }
+
+        /// <summary>
+        /// Получение списка карточек по типу
+        /// </summary>
+        public List<CardData> Cards {
             get {
                 SearchQuery searchQuery = context.Session.CreateSearchQuery();
                 //Поиск по типу карточки
@@ -277,12 +356,13 @@ namespace ExtendedCardExtension.Helpers {
                 //Поиск по секции
                 SectionQuery sectionQuery = typeQuery.SectionQueries.AddNew(new Guid("35473281-BCEB-415A-8603-74549421037E"));
                 //Поиск по значению поля
-                sectionQuery.ConditionGroup.Conditions.AddNew("Document", FieldType.RefCardId, ConditionOperation.Equals, context.ObjectContext.GetObjectRef<Document>(GetDocument).Id);
+                sectionQuery.ConditionGroup.Conditions.AddNew("Document", FieldType.RefCardId, ConditionOperation.Equals, this.Id /* context.ObjectContext.GetObjectRef<Document>(GetDocument).Id*/);
                 //Получение текста запроса
                 string query = searchQuery.GetXml();
                 //Выполнение запроса
                 CardDataCollection coll = context.Session.CardManager.FindCards(query);
-                return null;
+
+                return coll.ToList();
             }
         }
     }

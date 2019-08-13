@@ -7,10 +7,12 @@ namespace ExtendedCardExtension.Helpers {
     internal class ServiceHelper : DocsVision.BackOffice.WebClient.Helpers.ServiceHelper {
         private ICardKindService cardKindService;
         private IDocumentService documentService;
+        private ITaskService taskService;
+        private IStateService stateService;
+        private ITaskListService taskListService;
+        private IStaffService staffService;
 
-
-        public ServiceHelper(IServiceProvider serviceProvider) : base(serviceProvider) {
-        }
+        public ServiceHelper(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
         public ICardKindService CardKindService {
             get {
@@ -24,5 +26,28 @@ namespace ExtendedCardExtension.Helpers {
             }
         }
 
+        public ITaskService TaskService {
+            get {
+                return taskService ?? (taskService = ServiceUtil.GetService<ITaskService>(serviceProvider));
+            }
+        }
+
+        public IStateService StateService {
+            get {
+                return stateService ?? (stateService = ServiceUtil.GetService<IStateService>(serviceProvider));
+            }
+        }
+
+        public ITaskListService TaskListService {
+            get {
+                return taskListService ?? (taskListService = ServiceUtil.GetService<ITaskListService>(serviceProvider));
+            }
+        }
+
+        public IStaffService StaffService {
+            get {
+                return staffService ?? (staffService = ServiceUtil.GetService<IStaffService>(serviceProvider));
+            }
+        }
     }
 }
